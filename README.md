@@ -15,7 +15,40 @@
 
 ## 安装
 
-1. 确保已安装Go环境（1.16或更高版本）
+1. 安装Go环境（1.20或更高版本）
+
+   **macOS (使用Homebrew)**
+   ```
+   brew install go
+   ```
+
+   **Ubuntu/Debian Linux**
+   ```
+   sudo apt update
+   sudo apt install golang
+   ```
+
+   **CentOS/RHEL/Fedora**
+   ```
+   sudo dnf install golang
+   ```
+
+   **Windows (使用Chocolatey)**
+   ```
+   choco install golang
+   ```
+
+   **手动安装（所有平台）**
+   - 从[Go官网](https://golang.org/dl/)下载安装包
+   - 按照说明安装
+
+   安装后验证：
+   ```
+   go version
+   ```
+
+   > **注意**：本项目需要Go 1.20或更高版本。如果您看到类似`go mod tidy: go.mod 文件指示 go 1.20，但最大支持版本是 1.15`的错误，请更新您的Go版本。
+
 2. 克隆仓库
    ```
    git clone https://github.com/ganlian2020AI/biupdata.git
@@ -75,7 +108,7 @@ LOG_COMPRESS=true           # 是否压缩旧日志文件
 LOG_MAX_RECORDS=1000        # 内存中保留的最大日志记录数
 
 # 定时任务配置
-CRON_UPDATE_SCHEDULE=* * * * *  # 检查更新的Cron表达式
+CRON_UPDATE_SCHEDULE=0 * * * * *  # 检查更新的Cron表达式（秒 分 时 日 月 周）
 ```
 
 ### 代理配置
@@ -103,6 +136,39 @@ go build -o biupdata cmd/biupdata/main.go
 
 ```
 ./biupdata -env /path/to/config.env
+```
+
+## 常见问题
+
+### Go版本兼容性
+
+如果您在运行`go mod tidy`时遇到以下错误：
+```
+go mod tidy: go.mod 文件指示 go 1.20，但最大支持版本是 1.15
+```
+
+这表明您的Go版本太旧。有两种解决方案：
+
+1. **更新Go版本（推荐）**：
+   安装Go 1.20或更高版本。
+
+2. **修改go.mod文件（不推荐）**：
+   如果无法更新Go版本，可以尝试修改go.mod文件的第一行：
+   ```
+   go 1.15
+   ```
+   但请注意，这可能会导致某些依赖项无法正常工作。
+
+### Cron表达式错误
+
+如果您在启动程序时遇到以下错误：
+```
+添加定时任务失败: expected exactly 6 fields, found 5: [* * * * *]
+```
+
+这是因为我们使用的cron库需要6个字段的cron表达式（秒 分 时 日 月 周），而不是标准的5个字段。请确保您的`CRON_UPDATE_SCHEDULE`配置包含6个字段，例如：
+```
+CRON_UPDATE_SCHEDULE=0 * * * * *  # 每分钟的第0秒执行
 ```
 
 ## 网络连接检查

@@ -126,7 +126,7 @@ func LoadConfig(envFile string) (*Config, error) {
 			MaxRecords: getEnvAsInt("LOG_MAX_RECORDS", 1000),
 		},
 		Cron: CronConfig{
-			UpdateSchedule: getEnv("CRON_UPDATE_SCHEDULE", "* * * * *"),
+			UpdateSchedule: getEnv("CRON_UPDATE_SCHEDULE", "0 * * * * *"),
 		},
 	}
 

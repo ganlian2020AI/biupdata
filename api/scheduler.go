@@ -56,8 +56,9 @@ func AddUpdateTask(cfg *config.Config) error {
 		InitScheduler()
 	}
 
-	// 添加每分钟检查任务
-	_, err := scheduler.AddFunc("* * * * *", func() {
+	// 使用配置文件中的cron表达式
+	utils.LogInfo("使用cron表达式: %s", cfg.Cron.UpdateSchedule)
+	_, err := scheduler.AddFunc(cfg.Cron.UpdateSchedule, func() {
 		checkAndUpdateData(cfg)
 	})
 

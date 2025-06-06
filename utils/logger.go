@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -101,8 +102,9 @@ func addToBuffer(format string, v ...interface{}) {
 		logBuffer = logBuffer[1:]
 	}
 
-	// 添加新日志
-	logBuffer = append(logBuffer, format)
+	// 格式化日志消息并添加到缓冲区
+	logMsg := fmt.Sprintf(format, v...)
+	logBuffer = append(logBuffer, logMsg)
 }
 
 // GetLogBuffer 获取日志缓冲区
