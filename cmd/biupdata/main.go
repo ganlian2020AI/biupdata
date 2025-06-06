@@ -55,6 +55,15 @@ func main() {
 	utils.LogInfo("数据库初始化成功")
 	fmt.Println("数据库初始化成功")
 
+	// 初始化所有数据表
+	fmt.Println("正在初始化所有数据表...")
+	if err := db.InitAllTables(cfg.Binance.Symbols, cfg.Binance.Intervals); err != nil {
+		fmt.Printf("初始化数据表失败: %v\n", err)
+		utils.LogError("初始化数据表失败: %v", err)
+		os.Exit(1)
+	}
+	fmt.Println("所有数据表初始化成功")
+
 	// 设置API配置
 	fmt.Println("正在设置API配置...")
 	api.SetConfig(cfg)

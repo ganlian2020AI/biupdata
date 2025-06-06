@@ -39,6 +39,19 @@ func CloseDB() {
 	}
 }
 
+// InitAllTables 初始化所有需要的表
+func InitAllTables(symbols []string, intervals []string) error {
+	for _, symbol := range symbols {
+		for _, interval := range intervals {
+			if err := CreateTableIfNotExists(symbol, interval); err != nil {
+				return err
+			}
+		}
+	}
+	utils.LogInfo("所有表初始化完成")
+	return nil
+}
+
 // CreateTableIfNotExists 如果表不存在则创建表
 func CreateTableIfNotExists(symbol, interval string) error {
 	tableName := GetTableName(symbol, interval)
@@ -154,8 +167,13 @@ func GetKlineData(symbol, interval string, startTime, endTime int64, limit int) 
 			return nil, err
 		}
 
+		// 将时间戳转换为可读的日期时间格式
+		dateTime := utils.TimestampToShanghai(timestamp)
+		formattedTime := dateTime.Format("2006-01-02 15:04")
+
 		data := map[string]interface{}{
 			"timestamp":   timestamp,
+			"datetime":    formattedTime,
 			"open_price":  openPrice.String,
 			"close_price": closePrice.String,
 			"high_price":  highPrice.String,
