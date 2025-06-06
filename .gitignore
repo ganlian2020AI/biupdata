@@ -1,0 +1,35 @@
+# 忽略配置文件
+*.env
+config.env
+.env
+
+# 忽略日志
+logs/
+*.log
+
+# 忽略编译输出
+/biupdata
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# 忽略测试二进制文件
+*.test
+
+# 忽略输出文件
+*.out
+
+# 忽略Go工作目录
+/go.work
+
+# 忽略IDE文件
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 忽略系统文件
+.DS_Store
+Thumbs.db 
