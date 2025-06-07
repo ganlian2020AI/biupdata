@@ -211,6 +211,18 @@ GET /health
 GET /logs
 ```
 
+### 日志可视化页面
+
+```
+GET /logs/view
+```
+
+访问此URL可以打开一个Web页面，用于实时查看系统日志。页面功能包括：
+- 自动每10秒刷新一次日志
+- 不同类型日志显示不同颜色（信息/警告/错误）
+- 显示系统运行状态（定时任务状态、网络连接模式）
+- 支持手动刷新和停止自动刷新
+
 ### 获取K线数据
 
 ```
@@ -313,7 +325,7 @@ POST /api/v1/scheduler/stop
 
 | 字段名 | 类型 | 说明 |
 |--------|------|------|
-| timestamp | BIGINT | 时间戳（主键） |
+| timestamp | DATETIME | 上海时间（主键） |
 | open_price | DECIMAL(30,8) | 开盘价 |
 | close_price | DECIMAL(30,8) | 收盘价 |
 | high_price | DECIMAL(30,8) | 最高价 |
