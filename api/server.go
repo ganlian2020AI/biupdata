@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ganlian2020AI/biupdata/config"
 	"github.com/ganlian2020AI/biupdata/utils"
@@ -61,6 +62,9 @@ func registerRoutes() {
 			"logs": utils.GetLogBuffer(),
 		})
 	})
+
+	// 添加HTML日志页面
+	router.GET("/logs/view", viewLogs)
 
 	// 币安数据API
 	v1 := router.Group("/api/v1")
@@ -278,4 +282,250 @@ func stopScheduler(c *gin.Context) {
 		"message": "定时任务已停止",
 		"running": false,
 	})
+}
+
+// viewLogs 显示日志HTML页面
+func viewLogs(c *gin.Context) {
+	logs := utils.GetLogBuffer()
+	htmlContent := generateLogsHTML(logs)
+	c.Header("Content-Type", "text/html; charset=utf-8")
+	c.String(http.StatusOK, htmlContent)
+}
+
+// generateLogsHTML 生成日志HTML内容
+func generateLogsHTML(logs []string) string {
+	html := `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BiUpData 系统日志</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .logs {
+            height: 600px;
+            overflow-y: auto;
+            background-color: #f8f8f8;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .info {
+            color: #31708f;
+        }
+        .error {
+            color: #a94442;
+            font-weight: bold;
+        }
+        .warning {
+            color: #8a6d3b;
+        }
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #337ab7;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #286090;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #dff0d8;
+            border: 1px solid #d6e9c6;
+            border-radius: 3px;
+            color: #3c763d;
+        }
+        #autoRefresh {
+            margin-right: 10px;
+        }
+        .refresh-indicator {
+            font-size: 12px;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BiUpData 系统日志</h1>
+        
+        <div class="controls">
+            <div>
+                <input type="checkbox" id="autoRefresh" checked>
+                <label for="autoRefresh">自动刷新 (10秒)</label>
+                <span class="refresh-indicator" id="refreshIndicator"></span>
+            </div>
+            <button onclick="refreshLogs()">立即刷新</button>
+        </div>
+        
+        <div class="logs" id="logsContainer">
+`
+
+	// 添加日志条目
+	if len(logs) == 0 {
+		html += "            <div class='log-entry'>暂无日志记录</div>\n"
+	} else {
+		// 倒序显示日志，最新的在顶部
+		for i := len(logs) - 1; i >= 0; i-- {
+			logClass := "info"
+			if strings.Contains(logs[i], "[ERROR]") {
+				logClass = "error"
+			} else if strings.Contains(logs[i], "[WARNING]") {
+				logClass = "warning"
+			}
+			html += "            <div class='log-entry " + logClass + "'>" + logs[i] + "</div>\n"
+		}
+	}
+
+	html += `
+        </div>
+        
+        <div class="status" id="statusContainer">
+            正在从服务器获取状态...
+        </div>
+    </div>
+
+    <script>
+        let autoRefreshEnabled = true;
+        let refreshTimer;
+        let countdown = 10;
+        
+        // 页面加载完成后自动刷新
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshLogs();
+            getStatus();
+            startRefreshTimer();
+            
+            // 自动刷新开关
+            document.getElementById('autoRefresh').addEventListener('change', function() {
+                autoRefreshEnabled = this.checked;
+                if (autoRefreshEnabled) {
+                    startRefreshTimer();
+                } else {
+                    clearTimeout(refreshTimer);
+                    document.getElementById('refreshIndicator').textContent = '';
+                }
+            });
+        });
+        
+        // 刷新日志
+        function refreshLogs() {
+            fetch('/logs')
+                .then(response => response.json())
+                .then(data => {
+                    const logsContainer = document.getElementById('logsContainer');
+                    logsContainer.innerHTML = '';
+                    
+                    if (data.logs.length === 0) {
+                        logsContainer.innerHTML = "<div class='log-entry'>暂无日志记录</div>";
+                    } else {
+                        // 倒序显示日志，最新的在顶部
+                        for (let i = data.logs.length - 1; i >= 0; i--) {
+                            const log = data.logs[i];
+                            let logClass = 'info';
+                            
+                            if (log.includes('[ERROR]')) {
+                                logClass = 'error';
+                            } else if (log.includes('[WARNING]')) {
+                                logClass = 'warning';
+                            }
+                            
+                            const logEntry = document.createElement('div');
+                            logEntry.className = 'log-entry ' + logClass;
+                            logEntry.textContent = log;
+                            logsContainer.appendChild(logEntry);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('获取日志失败:', error);
+                });
+        }
+        
+        // 获取系统状态
+        function getStatus() {
+            Promise.all([
+                fetch('/api/v1/scheduler').then(response => response.json()),
+                fetch('/api/v1/network').then(response => response.json())
+            ])
+            .then(([schedulerData, networkData]) => {
+                const status = document.getElementById('statusContainer');
+                const schedulerStatus = schedulerData.running ? '运行中' : '已停止';
+                const networkMode = networkData.use_proxy ? '代理模式' : '直接连接';
+                
+                status.innerHTML = 
+                    '<strong>系统状态:</strong> 正常运行<br>' +
+                    '<strong>定时任务:</strong> ' + schedulerStatus + '<br>' +
+                    '<strong>网络模式:</strong> ' + networkMode + '<br>' +
+                    '<strong>更新时间:</strong> ' + new Date().toLocaleString();
+            })
+            .catch(error => {
+                console.error('获取状态失败:', error);
+                document.getElementById('statusContainer').innerHTML = 
+                    '<strong>系统状态:</strong> 无法获取状态信息<br>' +
+                    '<strong>错误信息:</strong> ' + error.message;
+            });
+        }
+        
+        // 开始自动刷新计时器
+        function startRefreshTimer() {
+            clearTimeout(refreshTimer);
+            countdown = 10;
+            updateCountdown();
+            
+            function updateCountdown() {
+                if (countdown > 0) {
+                    document.getElementById('refreshIndicator').textContent = '(' + countdown + '秒后刷新)';
+                    countdown--;
+                    refreshTimer = setTimeout(updateCountdown, 1000);
+                } else {
+                    refreshLogs();
+                    getStatus();
+                    countdown = 10;
+                    if (autoRefreshEnabled) {
+                        startRefreshTimer();
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
+`
+
+	return html
 }

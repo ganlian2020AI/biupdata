@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ganlian2020AI/biupdata/config"
 	"github.com/ganlian2020AI/biupdata/utils"
@@ -58,7 +59,7 @@ func CreateTableIfNotExists(symbol, interval string) error {
 
 	query := fmt.Sprintf(`
 	CREATE TABLE IF NOT EXISTS %s (
-		timestamp BIGINT NOT NULL,
+		timestamp DATETIME NOT NULL COMMENT '上海时间',
 		open_price DECIMAL(30,8) NOT NULL,
 		close_price DECIMAL(30,8) NOT NULL,
 		high_price DECIMAL(30,8) NOT NULL,
@@ -83,6 +84,10 @@ func CreateTableIfNotExists(symbol, interval string) error {
 func SaveKlineData(symbol, interval string, timestamp int64, openPrice, closePrice, highPrice, lowPrice, volume, note string) error {
 	tableName := GetTableName(symbol, interval)
 
+	// 将时间戳转换为上海时间
+	dateTime := utils.TimestampToShanghai(timestamp)
+	formattedTime := dateTime.Format("2006-01-02 15:04:05")
+
 	query := fmt.Sprintf(`
 	INSERT INTO %s (timestamp, open_price, close_price, high_price, low_price, volume, note)
 	VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -95,7 +100,7 @@ func SaveKlineData(symbol, interval string, timestamp int64, openPrice, closePri
 		note = VALUES(note)
 	`, tableName)
 
-	_, err := DB.Exec(query, timestamp, openPrice, closePrice, highPrice, lowPrice, volume, note)
+	_, err := DB.Exec(query, formattedTime, openPrice, closePrice, highPrice, lowPrice, volume, note)
 	if err != nil {
 		utils.LogError("保存K线数据到表 %s 失败: %v", tableName, err)
 		return err
@@ -112,6 +117,15 @@ func GetKlineData(symbol, interval string, startTime, endTime int64, limit int) 
 	var rows *sql.Rows
 	var err error
 
+	// 转换时间戳为日期时间格式
+	var startTimeStr, endTimeStr string
+	if startTime > 0 {
+		startTimeStr = utils.TimestampToShanghai(startTime).Format("2006-01-02 15:04:05")
+	}
+	if endTime > 0 {
+		endTimeStr = utils.TimestampToShanghai(endTime).Format("2006-01-02 15:04:05")
+	}
+
 	if startTime > 0 && endTime > 0 {
 		query = fmt.Sprintf(`
 		SELECT timestamp, open_price, close_price, high_price, low_price, volume, note
@@ -120,7 +134,7 @@ func GetKlineData(symbol, interval string, startTime, endTime int64, limit int) 
 		ORDER BY timestamp DESC
 		LIMIT ?
 		`, tableName)
-		rows, err = DB.Query(query, startTime, endTime, limit)
+		rows, err = DB.Query(query, startTimeStr, endTimeStr, limit)
 	} else if startTime > 0 {
 		query = fmt.Sprintf(`
 		SELECT timestamp, open_price, close_price, high_price, low_price, volume, note
@@ -129,7 +143,7 @@ func GetKlineData(symbol, interval string, startTime, endTime int64, limit int) 
 		ORDER BY timestamp DESC
 		LIMIT ?
 		`, tableName)
-		rows, err = DB.Query(query, startTime, limit)
+		rows, err = DB.Query(query, startTimeStr, limit)
 	} else if endTime > 0 {
 		query = fmt.Sprintf(`
 		SELECT timestamp, open_price, close_price, high_price, low_price, volume, note
@@ -138,7 +152,7 @@ func GetKlineData(symbol, interval string, startTime, endTime int64, limit int) 
 		ORDER BY timestamp DESC
 		LIMIT ?
 		`, tableName)
-		rows, err = DB.Query(query, endTime, limit)
+		rows, err = DB.Query(query, endTimeStr, limit)
 	} else {
 		query = fmt.Sprintf(`
 		SELECT timestamp, open_price, close_price, high_price, low_price, volume, note
@@ -158,7 +172,7 @@ func GetKlineData(symbol, interval string, startTime, endTime int64, limit int) 
 	var result []map[string]interface{}
 
 	for rows.Next() {
-		var timestamp int64
+		var timestamp time.Time
 		var openPrice, closePrice, highPrice, lowPrice, volume sql.NullString
 		var note sql.NullString
 
@@ -167,12 +181,14 @@ func GetKlineData(symbol, interval string, startTime, endTime int64, limit int) 
 			return nil, err
 		}
 
-		// 将时间戳转换为可读的日期时间格式
-		dateTime := utils.TimestampToShanghai(timestamp)
-		formattedTime := dateTime.Format("2006-01-02 15:04")
+		// 格式化时间
+		formattedTime := timestamp.Format("2006-01-02 15:04")
+
+		// 转回时间戳以保持API兼容性
+		unixTimestamp := timestamp.Unix() * 1000
 
 		data := map[string]interface{}{
-			"timestamp":   timestamp,
+			"timestamp":   unixTimestamp,
 			"datetime":    formattedTime,
 			"open_price":  openPrice.String,
 			"close_price": closePrice.String,
